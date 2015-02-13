@@ -34,8 +34,17 @@ module Haile
       end
     end
 
-    def list
-      wrap_request(:get, '/v2/apps')
+    def list(id = nil, embed = nil)
+      if id.nil?
+        url = "/v2/apps"
+      else
+        url = URI.escape("/v2/apps/#{id}")
+      end
+
+      params = {}
+      params[:embed] = embed if %w[ apps.tasks apps.failures ].include?(embed)
+
+      wrap_request(:get, "#{url}?#{query_params(params)}")
     end
 
     def list_tasks(id)
