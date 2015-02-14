@@ -112,6 +112,18 @@ module Haile
       end
     end
 
+    def list_subscriptions
+      wrap_request(:get, "/v2/eventSubscriptions")
+    end
+
+    def subscribe(callback_url)
+      wrap_request(:post, "/v2/eventSubscriptions?#{query_params(:callbackUrl => callback_url)}")
+    end
+
+    def unsubscribe(callback_url)
+      wrap_request(:delete, "/v2/eventSubscriptions?#{query_params(:callbackUrl => callback_url)}")
+    end
+
     private
 
     def wrap_request(method, url, options = {})
