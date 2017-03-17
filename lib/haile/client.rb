@@ -82,7 +82,8 @@ module Haile
               "with a docker image."
         return Haile::Response.error(msg)
       end
-      wrap_request(:put, "/v2/apps/#{id}", :body => app)
+      resp = wrap_request(:put, "/v2/apps/#{id}", :body => app)
+      puts "#{id}: #{resp.to_s}"
     end
 
     def scale(id, num_instances)
