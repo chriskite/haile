@@ -3,7 +3,7 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib', 'haile'))
 require 'trollop'
 
-SUB_COMMANDS = %w[endpoints kill kill_tasks start scale list list_tasks search docker_deploy]
+SUB_COMMANDS = %w[endpoints kill kill_tasks upstart scale list list_tasks search docker_deploy]
 
 global_opts = Trollop.options do
   version Haile::VERSION
@@ -12,14 +12,14 @@ Usage: haile [global options] [command] [options]
 
 Available commands:
 
-  kill           Kill an app and remove it from Marathon.
-  kill_tasks     Kill a task or tasks belonging to a specified app.
-  list           Show a list of running apps and their options.
-  list_tasks     Show a list of an app's running tasks.
-  scale          Scale the number of app instances.
-  search         Search the current list of apps.
-  start          Start a new app.
-  docker_deploy  Update the docker image tag of an app.
+  kill             Kill an app and remove it from Marathon.
+  kill_tasks       Kill a task or tasks belonging to a specified app.
+  list             Show a list of running apps and their options.
+  list_tasks       Show a list of an app's running tasks.
+  scale            Scale the number of app instances.
+  search           Search the current list of apps.
+  upstart          Start a new app, or update existing app from a config file
+  docker_deploy    Update the docker image tag of an app.
 
 Global options:
 EOS
@@ -48,17 +48,9 @@ cmd_opts = case cmd
     Trollop.options do
       opt :id, 'A unique identifier for the app.', :short => '-i', :required => true, :type => String
     end
-  when 'start'
+  when 'upstart'
     Trollop.options do
-      opt :id, 'A unique identifier for the app.', :required => true, :short => '-i', :type => String
-      opt :command, 'The command to start the app.', :short => '-C', :type => String
-      opt :executor, 'The mesos executor to be used to launch the app.', :short => '-X', :type => String
-      opt :num_instances, 'The number of instances to run (default 1).', :default => 1, :short => '-n'
-      opt :cpus, 'The number of CPUs to give to this app, can be a fraction (default 1.0).', :default => 1.0, :short => '-c'
-      opt :mem, 'The memory limit for this app, in MB, can be a fraction (default 10.0).', :default => 10.0, :short => '-m'
-      opt :uri, 'URIs to download and unpack into the working directory.', :short => '-u', :type => :strings
-      opt :env, 'Environment variables to add to the process, as NAME=VALUE.', :short => '-e', :type => :strings
-      opt :constraint, 'Placement constraint for tasks, e.g. hostname:UNIQUE or rackid:CLUSTER', :type => :strings
+      opt :config, 'The JSON config file for this app.', :required => true, :short => '-c', :type => String
     end
   when 'scale'
     Trollop.options do
@@ -124,19 +116,8 @@ end
 case cmd
 when 'endpoints'
   puts haile.endpoints(cmd_opts[:id]).parsed_response
-when 'start'
-  app_opts = {
-    :instances => cmd_opts[:num_instances] || 1,
-    :uris => cmd_opts[:uri] || [],
-    :cmd => cmd_opts[:command],
-    :env => cmd_opts[:env].nil? ? {} : Hash[cmd_opts[:env].map { |e| e.split('=', 2) }],
-    :cpus => cmd_opts[:cpus] || 1.0,
-    :mem => cmd_opts[:mem] || 10.0,
-    :constraints => (cmd_opts[:constraint] || []).map { |c| c.split(':') }
-  }
-  app_opts[:executor] = cmd_opts[:executor] unless cmd_opts[:executor] == nil
-  puts "Starting app '#{cmd_opts[:id]}'"
-  puts haile.start(cmd_opts[:id], app_opts)
+when 'upstart'
+  haile.upstart(cmd_opts[:config])
 when 'scale'
   puts "Scaling app '#{cmd_opts[:id]}' to #{cmd_opts[:num_instances]} instances"
   res = haile.scale(cmd_opts[:id], cmd_opts[:num_instances])

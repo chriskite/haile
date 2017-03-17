@@ -1,5 +1,6 @@
 require 'uri'
 require 'multi_json'
+require 'colorize'
 
 module Haile
   class Client
@@ -60,10 +61,19 @@ module Haile
       wrap_request(:get, url)
     end
 
-    def start(id, opts)
-      body = opts.dup
-      body[:id] = id
-      wrap_request(:post, '/v2/apps/', :body => body)
+    def upstart(config_file)
+      body = JSON.parse(open(config_file).read)
+      id = body['id']
+      app = wrap_request(:get, "/v2/apps/#{id}").parsed_response['app']
+      if !!app
+        puts "Updating app #{id}...".green
+        resp = wrap_request(:put, "/v2/apps/#{id}", :body => body)
+      else
+        puts "Starting app #{id}...".blue
+        resp = wrap_request(:post, '/v2/apps/', :body => body)
+      end
+
+      puts "#{id}: #{resp.to_s}"
     end
 
     def docker_deploy(id, image)
@@ -82,8 +92,7 @@ module Haile
               "with a docker image."
         return Haile::Response.error(msg)
       end
-      resp = wrap_request(:put, "/v2/apps/#{id}", :body => app)
-      puts "#{id}: #{resp.to_s}"
+      wrap_request(:put, "/v2/apps/#{id}", :body => app)
     end
 
     def scale(id, num_instances)
